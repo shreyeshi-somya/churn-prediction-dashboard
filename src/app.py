@@ -20,9 +20,32 @@ st.set_page_config(
     layout="wide"
 )
 
-# Title
+# Title and Introduction
 st.title("🔮 Customer Churn Prediction Dashboard")
-st.markdown("Predict customer churn using machine learning and get AI-powered insights")
+st.markdown("### Predict customer churn using machine learning and get AI-powered insights")
+
+# Overview section
+with st.expander("ℹ️ About This Dashboard", expanded=False):
+    st.markdown("""
+    This dashboard predicts customer churn for telecom companies using machine learning.
+    
+    **Features:**
+    - 📊 **4 ML Models**: Compare Logistic Regression, Random Forest, and XGBoost
+    - 🎯 **Batch Predictions**: Upload customer data and get churn predictions
+    - 📈 **Performance Metrics**: View confusion matrices, ROC curves, and key metrics
+    - 🤖 **AI Insights**: Get business recommendations powered by Claude AI
+    
+    **How to use:**
+    1. Select a model from the sidebar
+    2. Upload your customer data CSV in the "Make Predictions" tab
+    3. Review performance metrics and AI-generated insights
+    
+    **Models Available:**
+    - **Logistic Regression (Tuned)**: Best balanced approach (70% recall, 0.842 AUC)
+    - **Logistic Regression (Default)**: Conservative, high precision (66% precision)
+    - **Random Forest**: Stable predictions (0.843 AUC)
+    - **XGBoost (SMOTE)**: Catches most churners (71% recall)
+    """)
 
 # Sidebar
 st.sidebar.header("Settings")
@@ -73,6 +96,9 @@ st.sidebar.metric("Recall (Churn)", info["Recall"])
 st.sidebar.metric("Precision (Churn)", info["Precision"])
 st.sidebar.info(f"💡 **{info['Best for']}**")
 
+st.sidebar.markdown("---")
+st.sidebar.success("✅ Models loaded")
+
 # Load models
 @st.cache_resource
 def load_models():
@@ -90,8 +116,6 @@ lr_config, xgb_model, scaler, feature_names, lr_default, rf_model = load_models(
 # Initialize session state
 if 'results_df' not in st.session_state:
     st.session_state.results_df = None
-
-st.success("✅ Models loaded successfully!")
 
 # Tabs
 tab1, tab2, tab3 = st.tabs(["📈 Make Predictions", "📊 Model Performance", "🤖 AI Insights"])
@@ -199,8 +223,6 @@ with tab1:
 with tab2:
     st.header("Model Performance Metrics")
     
-    st.info("📊 Upload data with actual churn labels to see performance metrics")
-    
     # Check if we have actual churn data from the predictions
     if st.session_state.results_df is not None and 'Actual_Churn' in st.session_state.results_df.columns:
         st.success("✅ Evaluation data available!")
@@ -261,12 +283,26 @@ with tab2:
             line=dict(color='red', dash='dash')
         ))
         
+        # Add AUC text annotation in the center
+        fig.add_annotation(
+            x=0.6, y=0.3,
+            text=f"<b>AUC = {roc_auc:.3f}</b>",
+            showarrow=False,
+            font=dict(size=20, color='blue'),
+            bgcolor='rgba(255, 255, 255, 0.8)',
+            bordercolor='blue',
+            borderwidth=2,
+            borderpad=3
+        )
+        
         fig.update_layout(
             xaxis_title='False Positive Rate',
             yaxis_title='True Positive Rate',
             height=400
         )
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("📊 Upload data with actual churn labels to see performance metrics")
 
 with tab3:
     st.header("🤖 AI-Powered Insights")
