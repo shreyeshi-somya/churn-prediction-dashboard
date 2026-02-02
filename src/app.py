@@ -28,8 +28,50 @@ st.markdown("Predict customer churn using machine learning and get AI-powered in
 st.sidebar.header("Settings")
 model_choice = st.sidebar.selectbox(
     "Select Model",
-    ["Logistic Regression (Tuned)", "XGBoost (SMOTE)"]
+    [
+        "Logistic Regression (Tuned Threshold)",
+        "Logistic Regression (Default)",
+        "Random Forest",
+        "XGBoost (SMOTE)"
+    ]
 )
+
+# Model performance info
+st.sidebar.markdown("---")
+st.sidebar.subheader("📊 Expected Performance")
+
+model_info = {
+    "Logistic Regression (Tuned Threshold)": {
+        "ROC-AUC": "0.842",
+        "Recall": "70%",
+        "Precision": "54%",
+        "Best for": "Balanced approach"
+    },
+    "Logistic Regression (Default)": {
+        "ROC-AUC": "0.842",
+        "Recall": "56%",
+        "Precision": "66%",
+        "Best for": "Conservative predictions"
+    },
+    "Random Forest": {
+        "ROC-AUC": "0.843",
+        "Recall": "52%",
+        "Precision": "66%",
+        "Best for": "High precision"
+    },
+    "XGBoost (SMOTE)": {
+        "ROC-AUC": "0.824",
+        "Recall": "71%",
+        "Precision": "52%",
+        "Best for": "Catching more churners"
+    }
+}
+
+info = model_info[model_choice]
+st.sidebar.metric("ROC-AUC", info["ROC-AUC"])
+st.sidebar.metric("Recall (Churn)", info["Recall"])
+st.sidebar.metric("Precision (Churn)", info["Precision"])
+st.sidebar.info(f"💡 **{info['Best for']}**")
 
 # Load models
 @st.cache_resource
@@ -38,10 +80,12 @@ def load_models():
     xgb_model = joblib.load('models/xgboost_model.pkl')
     scaler = joblib.load('models/scaler.pkl')
     feature_names = joblib.load('models/feature_names.pkl')
+    lr_default = joblib.load('models/logistic_regression_model.pkl')
+    rf_model = joblib.load('models/random_forest_model.pkl')
     
-    return lr_config, xgb_model, scaler, feature_names
+    return lr_config, xgb_model, scaler, feature_names, lr_default, rf_model
 
-lr_config, xgb_model, scaler, feature_names = load_models()
+lr_config, xgb_model, scaler, feature_names, lr_default, rf_model = load_models()
 
 # Initialize session state
 if 'results_df' not in st.session_state:
@@ -98,12 +142,18 @@ with tab1:
                 df_encoded[numerical_features] = scaler.transform(df_encoded[numerical_features])
                 
                 # Make predictions based on selected model
-                if model_choice == "Logistic Regression (Tuned)":
+                if model_choice == "Logistic Regression (Tuned Threshold)":
                     model = lr_config['model']
                     threshold = lr_config['optimal_threshold']
                     predictions_proba = model.predict_proba(df_encoded)[:, 1]
                     predictions = (predictions_proba >= threshold).astype(int)
-                else:  # XGBoost
+                elif model_choice == "Logistic Regression (Default)":
+                    predictions_proba = lr_default.predict_proba(df_encoded)[:, 1]
+                    predictions = lr_default.predict(df_encoded)
+                elif model_choice == "Random Forest":
+                    predictions_proba = rf_model.predict_proba(df_encoded)[:, 1]
+                    predictions = rf_model.predict(df_encoded)
+                elif model_choice == "XGBoost (SMOTE)":
                     predictions_proba = xgb_model.predict_proba(df_encoded)[:, 1]
                     predictions = xgb_model.predict(df_encoded)
                 
