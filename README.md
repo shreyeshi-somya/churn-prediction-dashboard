@@ -133,13 +133,8 @@ This project demonstrates proficiency in:
 
 ## 👤 Author
 
-**Your Name**
 - LinkedIn: [Shreyeshi Somya](https://www.linkedin.com/in/sshreyeshi/)
 - Email: sshreyeshi@gmail.com
-
-## 📄 License
-
-This project is open source and available under the MIT License.
 
 ## 🙏 Acknowledgments
 
