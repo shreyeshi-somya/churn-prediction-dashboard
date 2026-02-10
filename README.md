@@ -1,6 +1,6 @@
 # 🔮 Customer Churn Prediction Dashboard
 
-**[🚀 Live Demo](https://churn-prediction-dashboard-ujetpgon5n2lulk6fmmhwg.streamlit.app/)** | [📊 View Code](https://github.com/your-username/churn-prediction-dashboard)
+**[🚀 Live Demo](https://churn-prediction-dashboard-ujetpgon5n2lulk6fmmhwg.streamlit.app/)** | [📊 View Code]([https://github.com/shreyeshi-somya/churn-prediction-dashboard](https://github.com/shreyeshi-somya/churn-prediction-dashboard/tree/main/notebooks))
 
 An end-to-end machine learning project that predicts telecom customer churn with interactive visualizations and AI-powered insights.
 
