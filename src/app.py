@@ -37,7 +37,7 @@ with st.expander("ℹ️ About This Dashboard", expanded=False):
     
     **How to use:**
     1. Select a model from the sidebar
-    2. Upload your customer data CSV in the "Make Predictions" tab
+    2. Use the built-in sample dataset or upload your own CSV in the "Make Predictions" tab
     3. Review performance metrics and AI-generated insights
     
     **Models Available:**
@@ -59,10 +59,7 @@ model_choice = st.sidebar.selectbox(
     ]
 )
 
-# Model performance info
-st.sidebar.markdown("---")
-st.sidebar.subheader("📊 Expected Performance")
-
+# Model performance info (shown after predictions are generated)
 model_info = {
     "Logistic Regression (Tuned Threshold)": {
         "ROC-AUC": "0.842",
@@ -90,15 +87,6 @@ model_info = {
     }
 }
 
-info = model_info[model_choice]
-st.sidebar.metric("ROC-AUC", info["ROC-AUC"])
-st.sidebar.metric("Recall (Churn)", info["Recall"])
-st.sidebar.metric("Precision (Churn)", info["Precision"])
-st.sidebar.info(f"💡 **{info['Best for']}**")
-
-st.sidebar.markdown("---")
-st.sidebar.success("✅ Models loaded")
-
 # Load models
 @st.cache_resource
 def load_models():
@@ -113,28 +101,75 @@ def load_models():
 
 lr_config, xgb_model, scaler, feature_names, lr_default, rf_model = load_models()
 
+# Load sample data
+@st.cache_data
+def load_sample_data():
+    return pd.read_csv('data/telco-churn-cleaned.csv')
+
 # Initialize session state
 if 'results_df' not in st.session_state:
     st.session_state.results_df = None
+if 'last_model' not in st.session_state:
+    st.session_state.last_model = model_choice
+
+# Clear results when model changes so sidebar doesn't show stale metrics
+if st.session_state.last_model != model_choice:
+    st.session_state.results_df = None
+    st.session_state.last_model = model_choice
 
 # Tabs
 tab1, tab2, tab3 = st.tabs(["📈 Make Predictions", "📊 Model Performance", "🤖 AI Insights"])
 
 with tab1:
     st.header("Upload Customer Data for Predictions")
-    
-    uploaded_file = st.file_uploader("Upload CSV file", type=['csv'])
-    
-    if uploaded_file is not None:
-        # Load the data
+
+    data_source = st.radio(
+        "Choose data source:",
+        ["📦 Use Sample Dataset (Telco Churn - 7,043 customers)", "📁 Upload your own CSV"],
+        horizontal=True
+    )
+
+    uploaded_file = None
+    if data_source.startswith("📁"):
+        uploaded_file = st.file_uploader("Upload CSV file", type=['csv'])
+        with st.expander("📋 Expected CSV Format"):
+            sample_df = pd.DataFrame({
+                'customerID': ['7590-VHVEG', '5575-GNVDE', '3668-QPYBK'],
+                'gender': ['Female', 'Male', 'Male'],
+                'SeniorCitizen': [0, 0, 0],
+                'Partner': ['Yes', 'No', 'No'],
+                'Dependents': ['No', 'No', 'No'],
+                'tenure': [1, 34, 2],
+                'PhoneService': ['No', 'Yes', 'Yes'],
+                'MultipleLines': ['No phone service', 'No', 'No'],
+                'InternetService': ['DSL', 'DSL', 'DSL'],
+                'OnlineSecurity': ['No', 'Yes', 'Yes'],
+                'OnlineBackup': ['Yes', 'No', 'Yes'],
+                'DeviceProtection': ['No', 'Yes', 'No'],
+                'TechSupport': ['No', 'No', 'No'],
+                'StreamingTV': ['No', 'No', 'No'],
+                'StreamingMovies': ['No', 'No', 'No'],
+                'Contract': ['Month-to-month', 'One year', 'Month-to-month'],
+                'PaperlessBilling': ['Yes', 'No', 'Yes'],
+                'PaymentMethod': ['Electronic check', 'Mailed check', 'Mailed check'],
+                'MonthlyCharges': [29.85, 56.95, 53.85],
+                'TotalCharges': [29.85, 1889.5, 108.15],
+                'Churn': ['No', 'No', 'Yes']
+            })
+            st.dataframe(sample_df, use_container_width=True)
+            st.caption("The **Churn** column is optional — include it if you want to see model performance metrics.")
+
+    if data_source.startswith("📦"):
+        df_predict = load_sample_data()
+    elif uploaded_file is not None:
         df_predict = pd.read_csv(uploaded_file)
-        
+    else:
+        df_predict = None
+
+    if df_predict is not None:
+
         st.success(f"✅ Loaded {len(df_predict)} customers")
-        
-        # Show preview
-        with st.expander("📋 Preview Data"):
-            st.dataframe(df_predict.head())
-        
+
         # Predict button
         if st.button("🔮 Generate Predictions", type="primary"):
             with st.spinner("Making predictions..."):
@@ -302,14 +337,14 @@ with tab2:
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("📊 Upload data with actual churn labels to see performance metrics")
+        st.info("📊 Generate predictions in the 'Make Predictions' tab first to see performance metrics")
 
 with tab3:
     st.header("🤖 AI-Powered Insights")
     
     # Check if we have predictions
     if st.session_state.results_df is None:
-        st.info("👆 Upload data and generate predictions in the 'Make Predictions' tab first")
+        st.info("👆 Generate predictions in the 'Make Predictions' tab first")
     else:
         st.write("Generate AI-powered insights about your churn predictions")
         
@@ -361,3 +396,15 @@ Keep it concise and actionable."""
                 except Exception as e:
                     st.error(f"Error generating insights: {str(e)}")
                     st.info("Make sure your ANTHROPIC_API_KEY is set correctly in the .env file")
+
+# Sidebar: show model performance only after predictions exist
+if st.session_state.results_df is not None:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📊 Expected Performance")
+    info = model_info[model_choice]
+    st.sidebar.metric("ROC-AUC", info["ROC-AUC"])
+    st.sidebar.metric("Recall (Churn)", info["Recall"])
+    st.sidebar.metric("Precision (Churn)", info["Precision"])
+    st.sidebar.info(f"💡 **{info['Best for']}**")
+    st.sidebar.markdown("---")
+    st.sidebar.success("✅ Models loaded")
